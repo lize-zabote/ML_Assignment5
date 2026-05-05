@@ -12,12 +12,6 @@ Based on: *Stability and Generalization* — Bousquet & Elisseeff, JMLR 2002.
 
 This project empirically studies the relationship between **regularization strength**, **algorithmic stability**, and **generalization performance** in linear regression.
 
-Key findings:
-- Increasing λ raises stability (smaller β̂) and, up to a threshold, reduces test error in correlated datasets (e.g., Diabetes).
-- OLS (λ = 0) is consistently the least stable model.
-- Larger training sets improve stability for a fixed λ, consistent with the theoretical bound β = O(1/λm).
-- In well-conditioned, underparameterized regimes (n ≫ d), OLS achieves lower test MSE than Ridge at moderate λ.
-
 ---
 
 ## Project Structure

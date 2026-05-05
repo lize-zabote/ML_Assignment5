@@ -4,6 +4,7 @@
 %  Instructor: Nicolò Cesa-Bianchi
 % ============================================================
 \documentclass[11pt, a4paper, twoside]{article}
+\raggedbottom
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
@@ -24,8 +25,10 @@
 % ── section style: compact, like JMLR ────────────────────────
 \titleformat{\section}{\normalfont\large\bfseries}{\thesection.}{0.5em}{}
 \titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection.}{0.5em}{}
-\titlespacing{\section}{0pt}{1.2ex plus .2ex}{0.6ex plus .1ex}
-\titlespacing{\subsection}{0pt}{0.8ex plus .2ex}{0.4ex plus .1ex}
+\titleformat{\paragraph}[runin]{\normalfont\normalsize\bfseries}{}{0pt}{}[.]
+\titlespacing{\section}{0pt}{2.4ex plus .4ex}{0.8ex plus .1ex}
+\titlespacing{\subsection}{0pt}{1.8ex plus .3ex}{0.6ex plus .1ex}
+\titlespacing{\paragraph}{0pt}{0.8ex plus .1ex}{0.5em}
 
 \hypersetup{colorlinks=true, linkcolor=blue!60!black,
             citecolor=green!50!black, urlcolor=blue!70!black}
@@ -78,22 +81,24 @@ for assessment on this or any other course of study.}
 
 \begin{abstract}
 \noindent
-We empirically study the relationship between regularization strength, algorithmic
-stability, and generalization performance in linear regression, following the theoretical
-framework of Bousquet and Elisseeff~\cite{bousquet2002}.
+This report empirically studies the relationship between regularization strength,
+algorithmic stability, and generalization in linear regression, following the framework
+of Bousquet and Elisseeff~\cite{bousquet2002}.
 Ridge regression and ordinary least squares (OLS) are implemented from scratch using
 only \texttt{numpy}, and stability is estimated via a leave-one-out prediction-change
 metric.
-Experiments on a synthetic dataset ($n=300$, $d=20$) and the real-world Diabetes
-benchmark confirm that Ridge stability $\betahat$ decreases monotonically with $\lambda$,
-consistent with the theoretical bound $\beta = \mathcal{O}(1/\lambda m)$.
+Experiments on a synthetic dataset ($n=300$, $d=20$) and the Diabetes benchmark
+confirm that Ridge stability $\betahat$ decreases monotonically with $\lambda$,
+consistent with the bound $\beta = \mathcal{O}(1/\lambda m)$ from the paper.
 On the synthetic data, OLS achieves slightly lower test MSE than Ridge at moderate
-$\lambda$ due to the well-conditioned, underparameterized regime ($n \gg d$).
-The Diabetes dataset exhibits a pronounced U-shaped test-error curve with an optimal
-$\lambda^* \approx 133$, where Ridge outperforms OLS.
-A size study confirms the complementary effects of $\lambda$ and $m$ on stability.
-A key finding is that maximum stability does not imply minimum test error: extreme
-regularization maximizes $\betahat$ while worsening generalization.
+$\lambda$, which is expected given the well-conditioned underparameterized regime
+($n \gg d$).
+On the Diabetes dataset, Ridge clearly outperforms OLS, with an optimal
+$\lambda^* \approx 133$.
+A size study shows that increasing $n$ and increasing $\lambda$ have complementary
+effects on stability.
+The main takeaway is that maximum stability does not imply minimum test error:
+pushing $\lambda$ too high improves $\betahat$ but hurts generalization.
 \end{abstract}
 
 \medskip\noindent\rule{\linewidth}{0.4pt}\medskip
@@ -119,9 +124,9 @@ algorithms satisfy $\beta = \mathcal{O}(1/\lambda m)$, directly linking the
 regularization parameter to stability.
 
 This assignment connects these theoretical results to practice.
-We implement Ridge regression and OLS from scratch using only \texttt{numpy},
-estimate stability via a leave-one-out metric, study how stability and test error
-co-vary with $\lambda$, and investigate the effect of training set size on stability.
+Ridge regression and OLS are implemented from scratch using only \texttt{numpy};
+stability is then estimated via a leave-one-out metric, and the results are used to
+study how stability and test error co-vary with $\lambda$ and with training set size.
 
 % ============================================================
 \section{Theoretical Background}
@@ -387,8 +392,8 @@ The curves confirm both dimensions of the theoretical bound.
 Increasing $\lambda$ reduces $\betahat$ (moving left to right along each curve),
 and increasing $n$ reduces $\betahat$ (moving from the top to the bottom curve at
 any fixed $\lambda$).
-The effects are complementary: a practitioner can achieve a target stability level
-either by collecting more data or by increasing regularization.
+The effects are complementary: the same target stability can be reached either by
+collecting more data or by increasing $\lambda$.
 
 % ============================================================
 \section{Discussion}
@@ -406,8 +411,8 @@ is meaningfully regularized, confirming that the pseudoinverse amplifies the
 influence of individual data points in the absence of shrinkage.
 
 \paragraph{Stability controls the gap, not the absolute error.}
-This is the most important conceptual distinction to draw from the results.
-Theorem~12 of~\cite{bousquet2002} bounds $R - R_\text{emp}$, not $R$ itself.
+Theorem~12 of~\cite{bousquet2002} bounds $R - R_\text{emp}$, not $R$ itself, and
+this distinction matters in practice.
 At $\lambda = 10^3$ on the Diabetes dataset, the model achieves the best
 $\betahat = 0.00124$ (tightest generalization gap bound) but the \emph{worst}
 test MSE = 0.559, because the model is shrunk so aggressively toward the zero
@@ -419,17 +424,17 @@ now seen through the lens of stability.
 \paragraph{When OLS generalizes as well as Ridge.}
 On the synthetic dataset ($n=300$, $d=20$), OLS achieves a lower test MSE than
 Ridge across the entire range of moderate $\lambda$.
-This is an honest negative result that deserves explanation rather than dismissal.
+This is worth explaining rather than dismissing as unexpected.
 In the well-conditioned underparameterized regime ($n \gg d$), the design matrix
 $X^\top X$ is already well-behaved, no individual training point has high leverage,
 and OLS is already near the Bayes-optimal estimator.
 Adding $\lambda I$ introduces unnecessary bias without meaningfully reducing
-variance, so Ridge underperforms OLS.
-This observation is consistent with~\cite{bousquet2002}: their bound guarantees a
-\emph{small gap} between train and test error for a stable algorithm, but does not
-promise that $R$ itself is small.
-The stability advantage of regularization becomes most pronounced when features are
-correlated (as in the Diabetes dataset) or when $n$ is close to $d$.
+variance, so Ridge underperforms OLS in this setting.
+This is consistent with~\cite{bousquet2002}: their bound guarantees a
+\emph{small gap} between train and test error for a stable algorithm, but says
+nothing about how small $R$ itself will be.
+The benefit of regularization is most visible when features are correlated
+(as in the Diabetes dataset) or when $n$ is close to $d$.
 
 \paragraph{Dataset size and stability.}
 The size study in Figure~\ref{fig:size} confirms $\betahat \propto 1/(\lambda m)$.
@@ -454,23 +459,22 @@ would yield more reliable estimates.
 \section{Conclusion}
 % ============================================================
 
-We have empirically confirmed the core predictions of Bousquet and
-Elisseeff~\cite{bousquet2002}:
-(1)~Ridge stability $\betahat$ decreases monotonically with $\lambda$ on both
-datasets, consistent with $\beta = \mathcal{O}(1/\lambda m)$;
-(2)~increasing the training set size reduces $\betahat$ in a manner consistent
-with the $1/(\lambda m)$ scaling, confirming that $\lambda$ and $m$ are
-complementary levers;
-(3)~on the Diabetes dataset, the optimal $\lambda^*$ corresponds to an intermediate
-stability level — extreme regularization achieves the best $\betahat$ but the worst
-test error, because the bound controls the generalization gap, not the absolute risk;
-(4)~in the well-conditioned underparameterized synthetic setting ($n \gg d$), OLS
-achieves lower test MSE than Ridge at moderate $\lambda$, illustrating that the
-stability advantage of regularization is most pronounced when features are correlated
-or when $n$ is close to $d$.
-Together, these results provide a stability-based interpretation of why regularization
-aids generalization, which is complementary to classical VC-dimension arguments and
-more directly operational for algorithm design.
+The experiments confirm the main predictions of Bousquet and
+Elisseeff~\cite{bousquet2002}.
+Ridge stability $\betahat$ decreases monotonically with $\lambda$ on both datasets,
+consistent with $\beta = \mathcal{O}(1/\lambda m)$, and the size study shows that
+increasing $n$ has an equivalent effect, confirming that $\lambda$ and $m$ act as
+complementary levers.
+On the Diabetes dataset, the optimal $\lambda^*$ corresponds to an intermediate
+stability level: pushing $\lambda$ further improves $\betahat$ but increases test
+error, because the bound controls the generalization gap and not the absolute risk.
+On the synthetic dataset, OLS generalizes as well as Ridge at moderate $\lambda$,
+which is expected in a well-conditioned underparameterized regime and highlights that
+the stability benefit of regularization is most relevant when features are correlated
+or $n$ is close to $d$.
+Overall, the stability framework offers a useful and intuitive way to understand why
+regularization helps generalization, complementary to classical complexity-based
+arguments.
 
 % ============================================================
 \bibliographystyle{plain}
