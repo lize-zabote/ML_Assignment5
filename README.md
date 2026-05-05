@@ -2,6 +2,7 @@
 
 **Statistical Methods for Machine Learning — A.Y. 2025/26**  
 Instructor: Nicolò Cesa-Bianchi  
+Student: Lize Ana Zabote (V13380)
 
 Based on: *Stability and Generalization* — Bousquet & Elisseeff, JMLR 2002.
 
@@ -9,37 +10,38 @@ Based on: *Stability and Generalization* — Bousquet & Elisseeff, JMLR 2002.
 
 ## Overview
 
-This project empirically studies the relationship between **regularization strength**,
-**algorithmic stability**, and **generalization performance** in linear regression.
+This project empirically studies the relationship between **regularization strength**, **algorithmic stability**, and **generalization performance** in linear regression.
 
 Key findings:
-- Increasing λ raises stability (smaller β̂) and, up to a threshold, reduces test error
-- OLS (λ = 0) is consistently the least stable model
-- Larger training sets improve stability for a fixed λ, consistent with β = O(1/λm)
-- L2 regularization (Ridge) is marginally more stable than L1 (Lasso) at the same λ
+- Increasing λ raises stability (smaller β̂) and, up to a threshold, reduces test error in correlated datasets (e.g., Diabetes).
+- OLS (λ = 0) is consistently the least stable model.
+- Larger training sets improve stability for a fixed λ, consistent with the theoretical bound β = O(1/λm).
+- In well-conditioned, underparameterized regimes (n ≫ d), OLS achieves lower test MSE than Ridge at moderate λ.
 
 ---
 
 ## Project Structure
-
-```
+```text
 assignment3/
 │
 ├── main.py               # entry point — run this
 │
 ├── src/
 │   ├── __init__.py
-│   ├── models.py         # Ridge, OLS, Lasso implemented from scratch
+│   ├── models.py         # Ridge and OLS implemented from scratch
 │   ├── datasets.py       # synthetic + real-world data loaders
 │   ├── stability.py      # stability estimation + experiment runners
 │   └── plotting.py       # all matplotlib visualization
 │
 ├── outputs/              # generated plots (created on first run)
-│   ├── assignment3_plots.pdf
-│   └── assignment3_plots.png
+│   ├── fig1_synthetic_stability.pdf
+│   ├── fig2_synthetic_error.pdf
+│   ├── fig3_diabetes_stability.pdf
+│   ├── fig4_diabetes_error.pdf
+│   └── fig5_size_study.pdf
 │
 ├── report/
-│   └── report_assignment3.tex   # LaTeX report
+│   └── report_assignment3.pdf   # Final report
 │
 ├── requirements.txt
 └── README.md
@@ -51,7 +53,7 @@ assignment3/
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/<your-username>/assignment3.git
+git clone [https://github.com/](https://github.com/)<your-username>/assignment3.git
 cd assignment3
 ```
 
@@ -73,7 +75,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Plots are saved to `outputs/assignment3_plots.pdf` and `.png`.
+Plots are saved as individual PDF files in the `outputs/` directory.
 
 ---
 
@@ -83,7 +85,6 @@ Plots are saved to `outputs/assignment3_plots.pdf` and `.png`.
 |---|---|---|
 | Ridge regression | Closed-form `(X'X + λI)⁻¹ X'y` | L2 |
 | OLS | Moore-Penrose pseudoinverse | None |
-| Lasso | Coordinate descent + soft-thresholding | L1 |
 
 ---
 
@@ -93,8 +94,7 @@ Following Bousquet & Elisseeff (2002), stability is estimated as:
 
 $$\hat{\beta} = \frac{1}{n} \sum_{i=1}^{n} \frac{1}{|S_{\text{test}}|} \sum_{z \in S_{\text{test}}} |f_S(x) - f_{S \setminus i}(x)|$$
 
-For each training point *i*, the model is retrained without it and the average
-absolute change in predictions on the held-out test set is recorded.
+For each training point *i*, the model is retrained without it and the average absolute change in predictions on the held-out test set is recorded.
 
 ---
 
@@ -109,6 +109,4 @@ absolute change in predictions on the held-out test set is recorded.
 
 ## Declaration
 
-*I declare that this material, which I now submit for assessment, is entirely my own
-work and has not been taken from the work of others, save and to the extent that such
-work has been cited and acknowledged within the text of my work.*
+*I declare that this material, which I now submit for assessment, is entirely my own work and has not been taken from the work of others, save and to the extent that such work has been cited and acknowledged within the text of my work. I understand that plagiarism, collusion, and copying are grave and serious offences in the university and accept the penalties that would be imposed should I engage in plagiarism, collusion or copying. This assignment, or any part of it, has not been previously submitted by me or any other person for assessment on this or any other course of study.*

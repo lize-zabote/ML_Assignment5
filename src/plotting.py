@@ -22,10 +22,10 @@ plt.rcParams.update({
 
 COLORS = {
     "ridge": "#2563eb", "ols": "#dc2626",
-    "lasso": "#16a34a", "small": "#7c3aed",
+    "small": "#7c3aed",
     "medium": "#d97706", "large": "#0891b2",
 }
-_LABELS = {"ridge": "Ridge (L2)", "ols": "OLS", "lasso": "Lasso (L1)"}
+_LABELS = {"ridge": "Ridge (L2)", "ols": "OLS"}
 
 
 def _style(ax, xlabel=r"Regularization strength $\lambda$"):
@@ -80,4 +80,3 @@ def plot_size_study(lambdas, size_results, filename, out_dir="outputs"):
     ax.set_title("Effect of Training Set Size on Stability\n(Ridge, Synthetic, $d=10$)")
     fig.tight_layout()
     _save(fig, filename, out_dir)
-

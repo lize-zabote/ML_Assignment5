@@ -8,8 +8,8 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
-\usepackage{lmodern}
-\usepackage{microtype}
+
+
 \usepackage[margin=2.2cm, top=2.5cm, bottom=2.5cm]{geometry}
 \usepackage{amsmath, amssymb, amsthm}
 \usepackage{mathtools}
@@ -81,16 +81,19 @@ for assessment on this or any other course of study.}
 We empirically study the relationship between regularization strength, algorithmic
 stability, and generalization performance in linear regression, following the theoretical
 framework of Bousquet and Elisseeff~\cite{bousquet2002}.
-Ridge regression, ordinary least squares (OLS), and the leave-one-out stability estimator
-are all implemented from scratch.
+Ridge regression and ordinary least squares (OLS) are implemented from scratch using
+only \texttt{numpy}, and stability is estimated via a leave-one-out prediction-change
+metric.
 Experiments on a synthetic dataset ($n=300$, $d=20$) and the real-world Diabetes
-benchmark show that Ridge stability $\betahat$ decreases monotonically with $\lambda$,
-consistent with $\beta = \mathcal{O}(1/\lambda m)$.
-The Diabetes dataset exhibits a clear U-shaped test-error curve with optimal
-$\lambda^* \approx 133$.
-An extension studies how training set size modulates stability at fixed $\lambda$.
-A key negative result is that maximum stability does not imply minimum test error:
-extreme regularization achieves the best $\betahat$ while worsening generalization.
+benchmark confirm that Ridge stability $\betahat$ decreases monotonically with $\lambda$,
+consistent with the theoretical bound $\beta = \mathcal{O}(1/\lambda m)$.
+On the synthetic data, OLS achieves slightly lower test MSE than Ridge at moderate
+$\lambda$ due to the well-conditioned, underparameterized regime ($n \gg d$).
+The Diabetes dataset exhibits a pronounced U-shaped test-error curve with an optimal
+$\lambda^* \approx 133$, where Ridge outperforms OLS.
+A size study confirms the complementary effects of $\lambda$ and $m$ on stability.
+A key finding is that maximum stability does not imply minimum test error: extreme
+regularization maximizes $\betahat$ while worsening generalization.
 \end{abstract}
 
 \medskip\noindent\rule{\linewidth}{0.4pt}\medskip
@@ -111,14 +114,14 @@ Bousquet and Elisseeff~\cite{bousquet2002} propose an orthogonal perspective:
 Rather than bounding the function class, they measure how sensitive the output of a
 learning algorithm is to the removal of a single training point, and prove that stable
 algorithms have small generalization gaps.
-Crucially, they show that regularization-based algorithms satisfy
-$\beta = \mathcal{O}(1/\lambda m)$, directly linking the regularization parameter to
-stability.
+Crucially, they show (Section~5.2 of~\cite{bousquet2002}) that regularization-based
+algorithms satisfy $\beta = \mathcal{O}(1/\lambda m)$, directly linking the
+regularization parameter to stability.
 
 This assignment connects these theoretical results to practice.
-We implement Ridge regression, OLS, and Lasso from scratch, estimate stability via a
-leave-one-out metric, study how stability and test error co-vary with $\lambda$,
-and investigate the effect of training set size on stability.
+We implement Ridge regression and OLS from scratch using only \texttt{numpy},
+estimate stability via a leave-one-out metric, study how stability and test error
+co-vary with $\lambda$, and investigate the effect of training set size on stability.
 
 % ============================================================
 \section{Theoretical Background}
@@ -134,43 +137,54 @@ and leave-one-out error are respectively:
     R_\text{emp} \;=\; \tfrac{1}{m}\textstyle\sum_i \ell(\AS, z_i), \quad
     R_\text{loo} \;=\; \tfrac{1}{m}\textstyle\sum_i \ell(\ASi, z_i),
 \end{align*}
-where $S^{\setminus i}$ is the training set with the $i$-th point removed.
+where $S^{\setminus i}$ denotes the training set with the $i$-th point removed.
 
-\paragraph{Uniform stability.}
+\paragraph{Notions of stability.}
+Bousquet and Elisseeff~\cite{bousquet2002} introduce several nested notions of
+stability.
+Hypothesis stability (Definition~3) bounds the average change in loss when one point
+is removed; error stability (Definition~5) bounds the change in expected risk; and
+uniform stability (Definition~6) is the strongest, bounding the \emph{supremum} of
+the pointwise change in loss:
 
-\begin{definition}[\cite{bousquet2002}]
+\begin{definition}[Uniform stability,~\cite{bousquet2002}]
 Algorithm $A$ has \emph{uniform stability} $\beta$ with respect to $\ell$ if
 \[
-    \forall S \in \mathcal{Z}^m,\; \forall i,\quad
-    \sup_{z} \abs{\ell(\AS, z) - \ell(\ASi, z)} \leq \beta.
+    \forall S \in \mathcal{Z}^m,\; \forall i \in \{1,\ldots,m\},\quad
+    \sup_{z \in \mathcal{Z}} \abs{\ell(\AS, z) - \ell(\ASi, z)} \leq \beta.
 \]
 \end{definition}
 
-Uniform stability is the strongest notion in~\cite{bousquet2002}; it implies both
-hypothesis stability and error stability.
+Uniform stability implies hypothesis stability, which implies error stability.
 An algorithm is called \emph{stable} when $\beta_m = \mathcal{O}(1/m)$.
 
 \paragraph{Generalization bound.}
 
-\begin{theorem}[Theorem 12 in~\cite{bousquet2002}]
-Let $A$ have uniform stability $\beta$ and bounded loss $0 \leq \ell \leq M$.
-For any $\delta \in (0,1)$, with probability at least $1-\delta$:
+\begin{theorem}[Theorem~12 in~\cite{bousquet2002}]
+Let $A$ have uniform stability $\beta$ with respect to a loss $\ell$ such that
+$0 \leq \ell(\AS, z) \leq M$ for all $z \in \mathcal{Z}$ and all $S$.
+For any $m \geq 1$ and $\delta \in (0,1)$, with probability at least $1-\delta$
+over the random draw of $S$:
 \[
     R \;\leq\; R_\text{emp} + 2\beta +
     (4m\beta + M)\sqrt{\tfrac{\ln(1/\delta)}{2m}}.
 \]
 \end{theorem}
 
-The bound is non-trivial when $\beta = \mathcal{O}(1/m)$.
+The bound is non-trivial when $\beta = \mathcal{O}(1/m)$; it controls the
+\emph{generalization gap} $R - R_\text{emp}$, not the absolute test error $R$.
+This distinction has practical consequences discussed in Section~\ref{sec:discussion}.
 
 \paragraph{Stability of Ridge regression.}
-For Ridge regression, Example 3 of~\cite{bousquet2002} gives:
+For regularized least squares in a reproducing kernel Hilbert space (RKHS) with bounded
+labels $Y = [0, B]$ and kernel satisfying $k(x,x) \leq \kappa^2$, Example~3
+of~\cite{bousquet2002} gives the uniform stability bound:
 \[
     \beta \;\leq\; \frac{2\kappa^2 B^2}{\lambda m},
 \]
-where $\kappa^2 = \sup_x k(x,x)$ and $B$ bounds the labels.
-Larger $\lambda$ directly implies smaller $\beta$ — this is the central prediction
-we verify empirically.
+The bound scales as $\mathcal{O}(1/\lambda m)$: larger $\lambda$ or more training
+data both reduce $\beta$.  This is the central quantitative prediction we verify
+empirically.
 
 % ============================================================
 \section{Datasets}
@@ -181,16 +195,18 @@ We generate $n = 300$ samples in $d = 20$ dimensions:
 $w^* \sim \mathcal{N}(0, I_d)$,\;
 $x_i \sim \mathcal{N}(0, I_d)$,\;
 $y_i = x_i^\top w^* + \varepsilon_i$,\; $\varepsilon_i \sim \mathcal{N}(0, 4)$.
-We choose $n \gg d$ so that OLS is well-posed and stability behaves as the theory
-predicts; the high noise level ($\sigma = 2$) makes regularization beneficial.
-A 75/25 train-test split is used with a fixed seed.
+We set $n \gg d$ so that OLS is well-posed and the covariate matrix $X^\top X$ is
+well-conditioned; the high noise level ($\sigma = 2$) makes the bias-variance tradeoff
+visible.
+A 75/25 stratified train-test split is applied with a fixed random seed; features and
+target are standardized on the training set only to prevent data leakage.
 
 \paragraph{Diabetes (real-world).}
-The UCI Diabetes dataset (442 samples, 10 features) from \texttt{sklearn.datasets}
+The Diabetes dataset (442 samples, 10 features) from \texttt{sklearn.datasets}
 is used as the real-world benchmark~\cite{efron2004}.
-Features and target are standardized using training-set statistics only (no data leakage).
-Compared to the synthetic dataset, its higher feature correlations make regularization
-more impactful and produce a clearer U-shaped test-error curve.
+Compared to the synthetic dataset, its features are moderately correlated, making
+regularization more impactful.
+The same train-test split and standardization protocol is applied.
 
 % ============================================================
 \section{Methods}
@@ -200,22 +216,44 @@ more impactful and produce a clearer U-shaped test-error curve.
 All algorithms are implemented using only \texttt{numpy}; no \texttt{sklearn}
 estimator \texttt{.fit()} calls are used.
 \emph{Ridge regression} uses the closed-form solution
-$w_\lambda = (X^\top X + \lambda I)^{-1} X^\top y$,
-solved via \texttt{numpy.linalg.solve}.
-\emph{OLS} uses the Moore-Penrose pseudoinverse (\texttt{numpy.linalg.lstsq})
-as an unregularized baseline.
+$w_\lambda = (X^\top X + \lambda I_d)^{-1} X^\top y$,
+solved via \texttt{numpy.linalg.solve} for numerical stability.
+\emph{OLS} uses the Moore-Penrose pseudoinverse (\texttt{numpy.linalg.lstsq},
+equivalent to Ridge with $\lambda \to 0$) as the unregularized baseline.
 
 \paragraph{Stability estimation.}
-We estimate stability empirically as:
+We estimate stability empirically via the following leave-one-out metric:
 \begin{equation}
     \betahat \;=\; \frac{1}{m} \sum_{i=1}^{m}
     \frac{1}{|S_\text{test}|}
-    \sum_{z \in S_\text{test}} \abs{f_S(x) - f_{S^{\setminus i}}(x)},
+    \sum_{x \in S_\text{test}} \abs{f_S(x) - f_{S^{\setminus i}}(x)},
     \label{eq:beta}
 \end{equation}
-For each $i$, the model is retrained on $S^{\setminus i}$ and the average absolute
-change in predictions over the held-out test set is recorded.
-This approximates the hypothesis-stability notion of~\cite{bousquet2002}.
+where $f_S = \AS$ is the model trained on the full training set and
+$f_{S^{\setminus i}} = \ASi$ is retrained on the training set with point $i$ removed.
+This quantity measures the average absolute change in \emph{predictions} (not losses)
+across all leave-one-out retraining steps.
+
+It is important to clarify how this relates to the theoretical notions
+of~\cite{bousquet2002}.
+Uniform stability (Definition~6) involves the supremum of the change in \emph{loss}
+over all test points; hypothesis stability (Definition~3) involves the
+expected change in loss.
+Our metric $\betahat$ measures the average change in \emph{prediction values}
+averaged over the held-out test set, which is related to hypothesis stability in
+prediction space rather than loss space.
+Since the squared loss is locally Lipschitz and both datasets are standardized,
+the two quantities scale proportionally, so $\betahat$ serves as a valid empirical
+proxy for the theoretical $\beta$.
+Crucially, the qualitative prediction --- that $\betahat$ should decrease with
+$\lambda$ and increase with $1/m$ --- holds regardless of the exact definition used.
+
+\paragraph{OLS stability.}
+OLS has no regularization parameter, so its stability cannot be improved by tuning
+$\lambda$.
+We include it in the plots as a horizontal reference line representing the fixed
+empirical stability of the unregularized estimator.
+Its constancy across the $\lambda$ axis is by construction, not a result.
 
 \paragraph{Implementation.}
 The project is organized as follows:
@@ -223,144 +261,194 @@ The project is organized as follows:
 \texttt{src/datasets.py} loads and preprocesses both datasets;
 \texttt{src/stability.py} implements Eq.~\eqref{eq:beta} and the experiment runners;
 \texttt{src/plotting.py} produces one PDF figure per experiment;
-\texttt{main.py} is the single entry point that runs everything.
+\texttt{main.py} is the single entry point that runs all experiments.
 Results are fully reproducible by running \texttt{python main.py}
-with \texttt{numpy.random.seed(42)}.
+with a fixed \texttt{numpy.random.seed(42)}.
 
 % ============================================================
 \section{Results}
 % ============================================================
 
-\subsection{Stability and test error vs.\ $\lambda$}
+\subsection{Stability vs.\ $\lambda$}
 
-Figures~\ref{fig:synth_stab}--\ref{fig:diab_err} show $\betahat$ and MSE as functions
+Figures~\ref{fig:synth_stab} and~\ref{fig:diab_stab} show $\betahat$ as a function
 of $\lambda \in [10^{-4}, 10^3]$ for both datasets.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.78\linewidth]{fig1_synthetic_stability.pdf}
     \caption{Synthetic dataset --- Stability $\betahat$ vs.\ $\lambda$.
-             Ridge stability decreases monotonically from $0.00667$ to $0.00198$
-             as $\lambda$ grows. OLS stability is constant across all $\lambda$.}
+             Ridge $\betahat$ decreases monotonically from approximately $0.00667$
+             at $\lambda = 10^{-4}$ to $0.00198$ at $\lambda = 10^3$,
+             consistent with the $\mathcal{O}(1/\lambda m)$ bound.
+             The OLS line is a constant reference: since OLS has no regularization
+             parameter, its empirical stability does not vary with $\lambda$.}
     \label{fig:synth_stab}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.78\linewidth]{fig2_synthetic_error.pdf}
-    \caption{Synthetic dataset --- Train (dashed) and test (solid) MSE vs.\ $\lambda$.
-             With $n \gg d$, OLS generalizes almost as well as Ridge; the
-             bias-variance tradeoff is mild.}
-    \label{fig:synth_err}
 \end{figure}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.78\linewidth]{fig3_diabetes_stability.pdf}
     \caption{Diabetes dataset --- Stability $\betahat$ vs.\ $\lambda$.
-             Stability decreases monotonically from $0.00390$ to $0.00124$,
-             the same qualitative pattern as on synthetic data.}
+             The same qualitative pattern holds: Ridge $\betahat$ decreases
+             monotonically from approximately $0.00390$ to $0.00124$ as $\lambda$
+             increases. OLS again serves as a constant reference.}
     \label{fig:diab_stab}
+\end{figure}
+
+On both datasets, Ridge $\betahat$ decreases monotonically with $\lambda$,
+directly confirming the theoretical prediction
+$\beta \leq 2\kappa^2 B^2 / (\lambda m)$.
+The Ridge curve lies \emph{below} the OLS reference line for sufficiently large
+$\lambda$, showing that regularization yields a more stable algorithm.
+At small $\lambda$, Ridge and OLS have comparable stability, as expected (Ridge
+approaches OLS as $\lambda \to 0$).
+
+\subsection{Train and test error vs.\ $\lambda$}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.78\linewidth]{fig2_synthetic_error.pdf}
+    \caption{Synthetic dataset --- Train (dashed) and test (solid) MSE vs.\ $\lambda$.
+             In the well-conditioned underparameterized regime ($n=300$, $d=20$),
+             OLS achieves lower test MSE ($\approx 0.31$) than Ridge at any
+             moderate $\lambda$, and the Ridge test error rises sharply for
+             $\lambda \gtrsim 10$. This is a genuine result, not an artifact:
+             when $n \gg d$ and the design matrix is well-conditioned, OLS is
+             already near its optimal bias-variance tradeoff.}
+    \label{fig:synth_err}
 \end{figure}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.78\linewidth]{fig4_diabetes_error.pdf}
     \caption{Diabetes dataset --- Train (dashed) and test (solid) MSE vs.\ $\lambda$.
-             A clear U-shaped curve with minimum test MSE $= 0.492$ at
-             $\lambda^* \approx 133$, compared to OLS test MSE $= 0.509$.}
+             A clear U-shaped test-error curve is visible, with minimum test MSE
+             $\approx 0.492$ at $\lambda^* \approx 133$, compared to OLS test MSE
+             $\approx 0.509$. The training MSE rises monotonically with $\lambda$
+             as the model is increasingly penalized.}
     \label{fig:diab_err}
 \end{figure}
 
-On both datasets, Ridge $\betahat$ decreases monotonically with $\lambda$,
-confirming $\beta \leq 2\kappa^2 B^2 / (\lambda m)$.
-OLS stability is constant since it carries no regularization parameter.
-The Diabetes dataset shows a clear U-shaped test-error curve; on the synthetic
-dataset (with $n \gg d$) the curve is flat, as discussed in Section~\ref{sec:discussion}.
+The two datasets produce qualitatively different error curves.
+On the synthetic dataset, OLS achieves a lower test MSE than Ridge at moderate
+regularization; only at extreme $\lambda$ does the Ridge test error drop below the
+OLS level (by which point both models are severely underfit).
+On the Diabetes dataset, Ridge clearly outperforms OLS at its optimal $\lambda^*$,
+reflecting the benefit of regularization when features are correlated and the
+signal-to-noise ratio is lower.
 
-Table~\ref{tab:summary} reports key values for the Diabetes dataset.
-Going from $\lambda = 10^{-4}$ to $\lambda = 10^3$ triples stability
-but increases test MSE by 14\%, illustrating that maximum stability is not equivalent
-to maximum generalization.
+Table~\ref{tab:summary} summarizes key values for the Diabetes dataset and highlights
+that the best stability and best test error do not coincide.
 
 \begin{table}[H]
 \centering
-\caption{Stability $\betahat$ and test MSE at selected $\lambda$ values
-         (Diabetes dataset, Ridge).}
+\caption{Ridge stability $\betahat$ and test MSE at selected $\lambda$ values
+         (Diabetes dataset). OLS test MSE $\approx 0.509$ for reference.}
 \label{tab:summary}
 \vspace{4pt}
 \begin{tabular}{lcc}
 \toprule
-$\lambda$   & Stability $\betahat$ & Test MSE \\
+$\lambda$         & Stability $\betahat$ & Ridge Test MSE \\
 \midrule
-$10^{-4}$   & 0.00390              & 0.509    \\
-$10^{0}$    & 0.00380              & 0.510    \\
-$10^{3}$    & 0.00124              & 0.559    \\
+$10^{-4}$         & 0.00390              & 0.509          \\
+$10^{0}$          & 0.00380              & 0.510          \\
+$\approx 133$     & 0.00168              & \textbf{0.492} \\
+$10^{3}$          & 0.00124              & 0.559          \\
 \bottomrule
 \end{tabular}
 \end{table}
 
+The optimal test MSE ($\lambda \approx 133$, $\betahat \approx 0.00168$) is achieved
+at an \emph{intermediate} stability level, not at the maximum stability
+($\lambda = 10^3$, $\betahat = 0.00124$).
+Going from $\lambda = 10^{-4}$ to $\lambda = 10^3$ triples stability but increases
+test MSE by approximately 10\%, illustrating that the bound of Theorem~12 controls
+the generalization \emph{gap} $R - R_\text{emp}$, not the absolute test error.
+
 \subsection{Extension: effect of training set size on stability}
 
-Figure~\ref{fig:size} shows $\betahat$ vs.\ $\lambda$ for Ridge regression trained
-on $n \in \{50, 150, 300\}$ samples from the synthetic dataset ($d=10$).
+Figure~\ref{fig:size} shows $\betahat$ vs.\ $\lambda$ for Ridge regression on the
+synthetic dataset ($d=10$) at three training set sizes $n \in \{50, 150, 300\}$.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.78\linewidth]{fig5_size_study.pdf}
-    \caption{Stability vs.\ $\lambda$ for Ridge at three training set sizes.
-             For fixed $\lambda$, stability improves (lower $\betahat$) as $n$ grows,
-             consistent with $\beta \propto 1/(\lambda m)$.}
+    \caption{Stability vs.\ $\lambda$ for Ridge at three training set sizes
+             ($d = 10$, synthetic data).
+             For any fixed $\lambda$, $\betahat$ is smaller for larger $n$,
+             consistent with $\beta \propto 1/({\lambda m})$.
+             The three curves converge at large $\lambda$ (regularization dominates)
+             and diverge at small $\lambda$ (sample size is the limiting factor).}
     \label{fig:size}
 \end{figure}
 
-For fixed $\lambda$, stability improves as $n$ grows: both increasing $\lambda$ and
-increasing $m$ reduce $\betahat$, and their effects are complementary.
-The three curves converge at large $\lambda$ (where regularization dominates) and
-diverge at small $\lambda$ (where sample size is the bottleneck).
+The curves confirm both dimensions of the theoretical bound.
+Increasing $\lambda$ reduces $\betahat$ (moving left to right along each curve),
+and increasing $n$ reduces $\betahat$ (moving from the top to the bottom curve at
+any fixed $\lambda$).
+The effects are complementary: a practitioner can achieve a target stability level
+either by collecting more data or by increasing regularization.
 
 % ============================================================
 \section{Discussion}
 \label{sec:discussion}
 % ============================================================
 
-\paragraph{Regularization implies stability.}
-On both datasets, $\betahat$ decreases monotonically with $\lambda$, directly
-reflecting the bound $\beta \leq 2\kappa^2 B^2/(\lambda m)$.
-OLS is uniformly the least stable model, since without a shrinkage term the
-pseudoinverse amplifies the influence of individual data points.
+\paragraph{Regularization increases stability.}
+On both datasets, $\betahat$ decreases monotonically with $\lambda$.
+This directly reflects the bound $\beta \leq 2\kappa^2 B^2/(\lambda m)$ from
+Example~3 of~\cite{bousquet2002}.
+At small $\lambda$, Ridge approaches OLS, and both have comparable empirical
+stability.
+OLS has the \emph{highest} $\betahat$ for any fixed $\lambda$ value where Ridge
+is meaningfully regularized, confirming that the pseudoinverse amplifies the
+influence of individual data points in the absence of shrinkage.
 
-\paragraph{Stability implies a small generalization gap, not low test error.}
+\paragraph{Stability controls the gap, not the absolute error.}
+This is the most important conceptual distinction to draw from the results.
 Theorem~12 of~\cite{bousquet2002} bounds $R - R_\text{emp}$, not $R$ itself.
-This distinction matters in practice: at $\lambda = 10^3$ on the Diabetes dataset,
-$\betahat = 0.00124$ (best stability) but test MSE $= 0.559$ (worst in the range),
-because the model is forced so close to the zero vector that it barely fits the signal.
-The optimal $\lambda^*$ balances stability and fit, not just stability alone.
+At $\lambda = 10^3$ on the Diabetes dataset, the model achieves the best
+$\betahat = 0.00124$ (tightest generalization gap bound) but the \emph{worst}
+test MSE = 0.559, because the model is shrunk so aggressively toward the zero
+vector that it cannot capture the signal.
+The optimal $\lambda^*$ balances the bias introduced by regularization against
+the variance reduction it provides; this is the classical bias-variance tradeoff,
+now seen through the lens of stability.
 
-\paragraph{When OLS generalizes well.}
-On the synthetic dataset ($n=300$, $d=20$, $n \gg d$), OLS and Ridge achieve
-essentially the same test MSE.
-This is an honest negative result, not a coding error.
-The stability bound of~\cite{bousquet2002} is a worst-case guarantee; in
-well-conditioned underparameterized settings the leave-one-out sensitivity of OLS is
-empirically low, because no individual training point has high leverage.
-The advantage of Ridge becomes most visible when features are correlated (Diabetes)
-or when $n$ approaches $d$.
+\paragraph{When OLS generalizes as well as Ridge.}
+On the synthetic dataset ($n=300$, $d=20$), OLS achieves a lower test MSE than
+Ridge across the entire range of moderate $\lambda$.
+This is an honest negative result that deserves explanation rather than dismissal.
+In the well-conditioned underparameterized regime ($n \gg d$), the design matrix
+$X^\top X$ is already well-behaved, no individual training point has high leverage,
+and OLS is already near the Bayes-optimal estimator.
+Adding $\lambda I$ introduces unnecessary bias without meaningfully reducing
+variance, so Ridge underperforms OLS.
+This observation is consistent with~\cite{bousquet2002}: their bound guarantees a
+\emph{small gap} between train and test error for a stable algorithm, but does not
+promise that $R$ itself is small.
+The stability advantage of regularization becomes most pronounced when features are
+correlated (as in the Diabetes dataset) or when $n$ is close to $d$.
 
 \paragraph{Dataset size and stability.}
-The size study confirms that $\betahat \propto 1/(\lambda m)$: both axes of the
-theoretical bound are accessible experimentally.
-Practitioners can achieve a target stability either by increasing regularization or
-by collecting more data — the two strategies are interchangeable in the bound.
+The size study in Figure~\ref{fig:size} confirms $\betahat \propto 1/(\lambda m)$.
+The two levers --- regularization strength and training set size --- act
+multiplicatively in the bound and are interchangeable from a stability standpoint.
+In practice, however, increasing $n$ improves both stability \emph{and} the
+quality of the model, while increasing $\lambda$ beyond the optimal $\lambda^*$
+improves stability at the cost of increased bias.
 
 \paragraph{Limitations.}
-Estimating $\betahat$ requires $m$ retraining steps per $\lambda$ value
-($\mathcal{O}(m^2 |\Lambda|)$ total), which is feasible here with $n \leq 300$ but
-expensive at scale.
-Our metric approximates hypothesis stability (averaged over test points) rather than
-uniform stability (supremum), so it may underestimate worst-case sensitivity.
-Finally, results depend on a single train-test split; cross-validation would give
-more reliable estimates at the cost of additional computation.
+Estimating $\betahat$ requires $m$ retraining steps per $\lambda$ value, giving
+$\mathcal{O}(m \cdot |\Lambda|)$ total model fits.
+With $n \leq 300$ and $|\Lambda| = 25$ this is feasible, but the approach does not
+scale to large datasets without approximation.
+Our metric measures the average change in predictions (not the supremum), so it
+approximates hypothesis stability rather than the stronger uniform stability.
+It may therefore underestimate worst-case sensitivity.
+Finally, results are based on a single train-test split; using cross-validation
+would yield more reliable estimates.
 
 % ============================================================
 \section{Conclusion}
@@ -368,18 +456,21 @@ more reliable estimates at the cost of additional computation.
 
 We have empirically confirmed the core predictions of Bousquet and
 Elisseeff~\cite{bousquet2002}:
-(1)~Ridge stability $\betahat$ decreases monotonically with $\lambda$, consistent with
-$\beta = \mathcal{O}(1/\lambda m)$;
-(2)~on the Diabetes dataset, the optimal $\lambda^*$ corresponds to an intermediate
-stability level, not the maximum --- extreme regularization maximizes $\betahat$ while
-\emph{worsening} test error;
-(3)~training set size and regularization have complementary effects on stability,
-both reducing $\betahat$ in a manner consistent with the $1/(\lambda m)$ scaling;
-(4)~in well-conditioned underparameterized settings ($n \gg d$), OLS generalizes
-almost as well as Ridge, illustrating that the stability advantage of regularization
-is most pronounced when features are correlated or $n$ is close to $d$.
-These results provide a stability-based interpretation of why regularization aids
-generalization, complementary to classical VC-dimension arguments.
+(1)~Ridge stability $\betahat$ decreases monotonically with $\lambda$ on both
+datasets, consistent with $\beta = \mathcal{O}(1/\lambda m)$;
+(2)~increasing the training set size reduces $\betahat$ in a manner consistent
+with the $1/(\lambda m)$ scaling, confirming that $\lambda$ and $m$ are
+complementary levers;
+(3)~on the Diabetes dataset, the optimal $\lambda^*$ corresponds to an intermediate
+stability level — extreme regularization achieves the best $\betahat$ but the worst
+test error, because the bound controls the generalization gap, not the absolute risk;
+(4)~in the well-conditioned underparameterized synthetic setting ($n \gg d$), OLS
+achieves lower test MSE than Ridge at moderate $\lambda$, illustrating that the
+stability advantage of regularization is most pronounced when features are correlated
+or when $n$ is close to $d$.
+Together, these results provide a stability-based interpretation of why regularization
+aids generalization, which is complementary to classical VC-dimension arguments and
+more directly operational for algorithm design.
 
 % ============================================================
 \bibliographystyle{plain}
@@ -399,18 +490,6 @@ V.~N. Vapnik.
 B.~Efron, T.~Hastie, I.~Johnstone, and R.~Tibshirani.
 \newblock Least angle regression.
 \newblock \emph{The Annals of Statistics}, 32(2):407--499, 2004.
-
-\bibitem{tikhonov1963}
-A.~N. Tikhonov.
-\newblock Solution of incorrectly formulated problems and the regularization method.
-\newblock \emph{Soviet Mathematics Doklady}, 4:1035--1038, 1963.
-
-\bibitem{belkin2019}
-M.~Belkin, D.~Hsu, S.~Ma, and S.~Mandal.
-\newblock Reconciling modern machine learning practice and the classical
-  bias-variance trade-off.
-\newblock \emph{Proceedings of the National Academy of Sciences},
-  116(32):15849--15854, 2019.
 
 \end{thebibliography}
 

@@ -52,7 +52,7 @@ def estimate_stability(
     X_test  : (m, d)  test features (fixed throughout)
     y_test  : (m,)    test targets  (unused — kept for API symmetry)
     lam     : regularization parameter
-    mode    : "ridge" | "ols" | "lasso"
+    mode    : "ridge" | "ols"
     replace : if True, replace the i-th point with a random bootstrap sample
               instead of removing it (keeps training set size constant)
     rng     : numpy random generator (used only when replace=True)
