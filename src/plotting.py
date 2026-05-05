@@ -1,6 +1,14 @@
 """
 plotting.py — individual figure saving for Assignment 3.
 Each experiment produces a separate PDF in outputs/.
+
+Figures
+-------
+- fig1_synthetic_stability.pdf
+- fig2_synthetic_error.pdf
+- fig3_diabetes_stability.pdf
+- fig4_diabetes_error.pdf
+- fig5_size_study.pdf
 """
 
 import os
@@ -73,14 +81,3 @@ def plot_size_study(lambdas, size_results, filename, out_dir="outputs"):
     fig.tight_layout()
     _save(fig, filename, out_dir)
 
-
-def plot_l1_vs_l2(lambdas, results, filename, out_dir="outputs"):
-    fig, ax = plt.subplots(figsize=(6, 4))
-    for mode, res in results.items():
-        ax.plot(lambdas, res["stabilities"], color=COLORS[mode], lw=2,
-                label=_LABELS.get(mode, mode), marker="^", markersize=3)
-    _style(ax)
-    ax.set_ylabel(r"Stability $\hat{\beta}$", fontsize=11)
-    ax.set_title("L1 vs L2 Stability Comparison\n(Synthetic Dataset)")
-    fig.tight_layout()
-    _save(fig, filename, out_dir)
