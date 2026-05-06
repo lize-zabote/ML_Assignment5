@@ -1,27 +1,3 @@
-"""
-stability.py
-------------
-Empirical estimation of algorithmic stability following:
-
-    Bousquet & Elisseeff, "Stability and Generalization",
-    JMLR 2 (2002) 499-526.
-
-The stability metric estimated here is:
-
-    β̂ = (1/n) Σ_{i=1}^{n}  mean_{z ∈ S_test} |f_S(x) - f_{S\\i}(x)|
-
-which approximates *uniform stability* (Definition 6 in the paper):
-for each training point i the model is retrained without that point,
-and the average absolute change in predictions on the fixed test set
-is measured.
-
-Functions
----------
-- estimate_stability : compute β̂ for a single (model, λ) pair
-- run_experiment     : sweep over λ values and record errors + stability
-- run_size_study     : vary training set size, record stability
-"""
-
 import numpy as np
 from src.models import fit, predict, mse
 
@@ -36,31 +12,6 @@ def estimate_stability(
     replace: bool = False,
     rng: np.random.Generator = None,
 ) -> float:
-    """
-    Estimate uniform stability β̂ via leave-one-out retraining.
-
-    For each training index i:
-      1. Remove (or replace) the i-th sample.
-      2. Retrain the model on the modified set.
-      3. Record mean |Δprediction| on the fixed test set.
-    β̂ is the average over all i.
-
-    Parameters
-    ----------
-    X_train : (n, d)  training features
-    y_train : (n,)    training targets
-    X_test  : (m, d)  test features (fixed throughout)
-    y_test  : (m,)    test targets  (unused — kept for API symmetry)
-    lam     : regularization parameter
-    mode    : "ridge" | "ols"
-    replace : if True, replace the i-th point with a random bootstrap sample
-              instead of removing it (keeps training set size constant)
-    rng     : numpy random generator (used only when replace=True)
-
-    Returns
-    -------
-    beta_hat : float — empirical stability estimate
-    """
     n = len(y_train)
     rng = rng or np.random.default_rng(0)
 
@@ -96,21 +47,6 @@ def run_experiment(
     dataset_name: str,
     modes: list,
 ) -> dict:
-    """
-    For each model mode and each λ, compute train/test MSE and β̂.
-
-    Parameters
-    ----------
-    X_tr, y_tr   : training data
-    X_te, y_te   : test data
-    lambdas      : array of regularization values to sweep
-    dataset_name : label for progress printing
-    modes        : list of mode strings, e.g. ["ridge", "ols"]
-
-    Returns
-    -------
-    results : dict[mode -> {"train_errs", "test_errs", "stabilities"}]
-    """
     results = {}
     for mode in modes:
         print(f"  [{dataset_name}]  mode={mode:<6s}  ({len(lambdas)} λ values)")
@@ -139,22 +75,6 @@ def run_size_study(
     sizes: tuple = (50, 150, 300),
     d: int = 10,
 ) -> dict:
-    """
-    Study how stability scales with training set size for Ridge regression.
-
-    For each n in `sizes`, generates a fresh synthetic dataset and computes
-    β̂ across all λ values.
-
-    Parameters
-    ----------
-    lambdas : regularization grid
-    sizes   : training set sizes to compare
-    d       : feature dimensionality
-
-    Returns
-    -------
-    size_results : dict[n -> np.ndarray of β̂ values]
-    """
     from src.datasets import make_synthetic
 
     print("\n[Size study] Ridge regression on synthetic data")

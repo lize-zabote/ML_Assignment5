@@ -1,6 +1,3 @@
-"""
-main.py — Assignment 3: Regularization and Stability
-"""
 import numpy as np
 from src.datasets  import make_synthetic, make_diabetes
 from src.stability import run_experiment, run_size_study
